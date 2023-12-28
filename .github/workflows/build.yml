@@ -1,0 +1,62 @@
+name: Build APK
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          sudo apt-get update
+          sudo apt-get install -y aidl build-essential libstdc++6 openjdk-8-jdk
+
+      - name: Install Cython
+        run: |
+          sudo python -m pip install cython
+
+      - name: Install pyrosa
+        run: |
+          sudo python -m pip install pyrosm
+
+      - name: Download and unzip Android SDK
+        run: |
+          wget https://dl.google.com/android/repository/commandlinetools-linux-7583922_latest.zip
+          unzip commandlinetools-linux-7583922_latest.zip -d $HOME/android-sdk
+          echo "export PATH=\$PATH:\$HOME/android-sdk/cmdline-tools/bin" >> $HOME/.bashrc
+          source $HOME/.bashrc
+
+      - name: Accept Android licenses
+        run: |
+          mkdir -p $HOME/android-sdk/licenses
+          echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > $HOME/android-sdk/licenses/android-sdk-license
+
+      - name: Install buildozer
+        run: |
+          sudo apt-get update
+          python -m pip install buildozer
+
+      - name: Build with Buildozer
+        run: |
+          sudo apt-get update
+          cd $GITHUB_WORKSPACE  # Przejdź do katalogu projektu
+          buildozer -v android debug --no-build-isolation
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: app
+          path: $GITHUB_WORKSPACE/bin/*.apk
